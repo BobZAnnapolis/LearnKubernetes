@@ -1,6 +1,9 @@
 UDEMY Learn Kubernetes From A DevOps Guru Notes
+===============================================
+
 
 Section 1
+=========
 
 course examples available at https://github.com/jleetutorial/kubernetes-demo
 
@@ -148,5 +151,237 @@ bash commands executed :
   594  history
 
 
-Section 2 Architecture Overview
+================================================================================
+================================================================================
 
+
+Section 2 Architecture Overview
+===============================
+
+Masters and Nodes
+
+developer/operator/sysadmin/engineer interacts w/master(s)
+
+Masters 
+  - API Server
+  - Scheduler
+  - Controller Manager  (cmgr)
+
+cmgr interacts w/k8s node(s)
+
+nodes
+  - kubelet
+  - kube-proxy
+  - 1 or more pods
+  - Docker
+
+users access the applications running on the pod(s)
+
+A node is a 'worker machine' in k8s, a vm or a physical machine
+Has the services necessary to run pods
+
+Each node has a common set of services, eg, Docker, kubelet, cube-proxy
+kubelet - monitors/runs pods
+kube-proxy - glue on each node that makes sure network services on each node can be accessed
+
+How should applications be designed to take advantage of scaling
+stateful versus stateless
+how state is handled can either enable or interfere with scaling, it most certainly dictates how you'll scale
+
+stateful applications create/save application-/session-specific data locally - essentially lock apps to 1 machine - not a good idea if you want/need scaling
+if that server dies - that state is lost - it is also the only 1 that knows what state that user's data is in
+
+stateless applications update a central data store, eg, db, when necessary and any server can handle any request at any time to continue processing
+
+K8S provides many ways to implement replication/scaling in your deployment
+YAML file has a 'replicas' keyword -most popular
+- define a replicaset
+- deploy multiple bare pods
+- define jobs
+- daemonset
+
+
+If your original deployment is still running and did NOT specify REPLICAS > 1, 
+to prevent any downtime, you can issue a kubectl command
+- kubectl scale --replicas=4 deployment/tomcat-deployment
+- or if it's stopped, when you re-deploy - modify the replicas keyword in the YAML file
+
+
+you can run the get pods or get deployments to see that there are now 4 replicas runnings
+how does k8s decide which one gets a deployment ?
+
+the only way pods can be exposed to the outside world is thru defined services
+
+we previously ran the "kubectl expose deployment tomcat-deployment --type=NodePort" cmd when there was just 1 instance running
+
+the "Load Balancer" service provides this function
+
+the load balancer exposes just a single port but it decides which replica to send the request to
+kubectl expose deployment tomcat-deployment --type=LoadBalancer --port=8080 --target-port=8080 --name tomcat-load-balancer
+kubectl describe services tomcat-load-balancer
+Name:                     tomcat-load-balancer
+Namespace:                default
+Labels:                   app=tomcat
+Annotations:              <none>
+Selector:                 app=tomcat
+Type:                     LoadBalancer
+IP:                       10.108.164.206
+Port:                     <unset>  8080/TCP
+TargetPort:               8080/TCP
+NodePort:                 <unset>  31552/TCP
+Endpoints:                172.17.0.3:8080,172.17.0.6:8080,172.17.0.7:8080 + 1 more...
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Events:                   <none>
+
+
+DEPLOYMENTS
+===========
+high level object in k8s
+define a desired state of an application
+
+consist of pods
+
+optionally, they can also include replicasets - which will be automagically managed by the deployment based upon its replica cfg
+
+with deployment objects, you can :
+- create a newdeployment
+- update an existing {eg, set number of replicas}
+- apply rolling updates to pods running on your cluster
+- rollback to a previous version
+- pause & resume
+
+kubectl is your gateway to working w/deployments
+useful commands
+list deployments
+  - kubectl get deployments
+view status of deployment rollouts
+  - kubectl rollout status deployment deployment_nm
+set the image of a deployment
+  - kubectl set image
+    - look in the deployment.yaml file - in the container section - can change the image in any container using
+      this command as long as we know the name, image version and deployment name
+      eg, use get deployments to get deployment name, kubectl set image deployment/tomcat-deployment tomcat=tomcat=tomcat:9.0.1; do jubectl describe deployments afterward to see new image version
+view the history of a rollout, including previous revisions
+  - kubectl rollout history deployment tomcat-deployment to see list of mods
+  - add --revision=# to get description of the change
+
+
+LABELS & SELECTORS
+==================
+
+as the cluster grows, there will be an increasing number of pods, resources, services, etc - keeping track of everything can get cumbersome 
+
+a method to keep things organized and to hols you and k8s identify resources to act upon
+
+labels are key/value pairs that you can attach to objects like pods
+  - they are for users to help describe meaningful and relevant info about an object
+  - they do not affect the semantics of the core system
+selectors are a way of expressing how to select objects based upon their labels
+  - simple language to define what labels match and which ones do
+  - you can specify if a label equals a given criteria or if it fits inside a set of criteria
+    - equality-based
+    - set-based
+
+you can label nearly anything in the k8s world
+  - deployments
+  - services
+  - nodes
+
+eg, use labels to label a nice that it has SSD storage and then use a selector to tell the deployment that our app should only ever go onto a node with SSD storage
+
+
+
+HEALTH CHECKING
+===============
+
+what happens when something in our cluster goes wrong ?
+
+k8s has 'health checks'
+- readiness problems
+- liveness problem
+
+readiness probes : determine when a pod is "ready", eg, after it has started to see when it's ready and has loaded what it needs to internally in the image and is ready to take requests from external services
+
+liveness probes : determine when a pod is 'healthy' or 'unhealthy' after it has become ready
+
+whether they are a readiness or a liveness probe they can use a variety of methods to ascertain a container's status
+  - successful HTP or TCP request to the pod
+  - successful command execution on the pod
+probes are defined on the container in a Deployment or Pod specification
+
+on our tomcat example :
+- a readiness probe will check to make sure the Pod has started and is ready to begin taking requests
+- a liveness probe on the tomcat deployment will help us ensure the containers continue to be able to accept and service requests without error in a reasonable amount of time
+
+  657  cd Labels\ \&\ Selectors/
+  658  lsa
+  660  cat deployment.yaml 
+  661  kubectl describe deployments
+  662  cat deployment.yaml 
+  663  kubectl get nodes
+  664  kubectl label node minikube storageType=ssd
+  665  kubectl get nodes
+  666  kubectl describe node minikube
+       - see storage=ssd in labels section
+  667  cat deployment.yaml 
+  668  kubectl apply -f deployment.yaml 
+  669  cd..
+  670  cd Health\ Checks/
+  671  lsa
+  674  cat deployment.yaml 
+  675  kubectl apply -f ./deployment.yaml 
+  676  kubectl describe deployment tomcat-deployment
+       - see new lines with readiness and liveness probes running
+
+
+WEB INTERFACE
+=============
+
+command line kubectl commands are the main interface
+also has a web interface
+called "Dashboard UI"
+runs on k8s master(s)
+accessible directly if you have direct network connectivity directly to your cluster/master(s) - unlikely in production envs
+
+kubectl can create a proxy/tunnel if you do not "kubectl proxy"
+
+provides a variety of views for nearly all of the command line kubectl commands
+
+"minikube dashboard" command bring up UI
+
+
+EXERCISE
+========
+get latest mongoldb replicates {4} up and running on our single node
+1 way
+  - 2 commands
+    - kubectl run mongo-exercise-1 --image=mongo --port=27017
+    - kubectl scale --replicas=4 deployment/mongo-exercise-1
+
+Other ways
+  - write a deployment file, use kubectl apply & kubectl expose
+  - write a deployment file and a service file and use kubectl apply on both
+  - use a K8S package Manager like helm to handle the work for you {advanced}
+  - Use the Dashboard UI
+
+  703  cd 02_Basic_and_Core_Concepts/
+  705  cd Scaling\ \&\ Replication/
+  707  cat deployment.yaml 
+  708  cp deployment.yaml mongodb.yaml 
+  710  vim mongodb.yaml 
+  714  kubectl apply -f mongodb.yaml 
+  778  kubectl expose deployment mongodb-deployment --type=NodePort
+  748  kubectl get pods
+  777  kubectl describe deployment mongodb-deployment
+  780  kubectl get deployments
+  780  kubectl get deployments
+
+================================================================================
+================================================================================
+
+Section 3
+=========
+
+DNS & Service Discovery
+=======================
