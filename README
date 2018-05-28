@@ -1,3 +1,152 @@
 UDEMY Learn Kubernetes From A DevOps Guru Notes
 
+Section 1
+
+course examples available at https://github.com/jleetutorial/kubernetes-demo
+
+minikube - runs actually k8s code, best for testing out stuff on workstations
+
+MINIKUBE
+- all-in-one install of k8s
+- takes all the distributed components of k8s and packages them into a single vm to run locally
+- a few caveats :
+  - mk does NOT support Cloud Provider specific features such as Load Balancers, Persistent Volumes
+  - mk requires Virtualization - on Linux VirtualBox or VMWare Fusion
+
+Terminology
+K8S "deployments" are the high-level constructs that define an application
+"pods" are instances of a container in a deployment
+"services" are endpoints that expose ports to the outside world
+You can delete, create, modify and retrieve information about any of these using the kubectl commands and local UI
+
+Mac OS
+- brew update
+- brew install kubectl
+  - needed to install Xcode command line tools
+- brew install homebrew/cask/minikube
+- brew cask install virtualbox
+
+- minikube start
+  kubectl run hello-minikube --image=gcr.io/google_containers/echoserver:1.4 --port=8080
+  kubectl expose deployment hello-minikube --type=NodePort
+  kubectl get pod
+  curl $(minikube service hello-minikube --url)
+  kubectl delete deployment hello-minikube
+  kubectl get pod
+  minikube stop
+
+
+What does a k8s app look like ?
+- 'deployments' are the central metaphor for what we'd consider 'apps' or 'services'
+- deployments are described as a collection of resources and references
+- deployments take many forms based on the type of services being deployed
+- typically described in YAML format
+
+1st k8s app, tomcat
+- deploy tomcat app server using official docker image
+- tasks
+  - define the deployment
+    - most simple deployment is a single pod, no redundancy, no separation of services
+    - a pod is an instance of a container
+    - deployments can have any number of pods required to get the job done
+  - expose its services
+  - deploy it to our cluster
+
+If a registry isn't specified - k8s will default to online docker hub
+
+- minikube start
+- define the deployment
+  - kubectl apply -f kubernetes-demo/01_Introduction_to_Kubernetes/Your\ First\ k8s\ App/deployment.yaml
+- map exposed service in container to outside world 
+  - kubectl expose deployment tomcat-deployment --type=NodePort
+- ask minikube what port it chose to expose
+  - minikube service tomcat-deployment --url
+- verify we could access the app at the given port
+  - curl http://192.168.99.100:32047
+
+
+KUBECTL
+- basic command to interact w/any k8s cluster, local, remote, etc
+- primary command line access tool
+- kubectl get pods
+  - list all running
+- kubectl describe pods
+  - detailed info on all
+  - specify name to list just 1
+  - lists LOTS of info
+
+To have running containers communicate with outside world, have to expose a port 
+  - kubectl expose 
+    - exposes a port {UDP or TCP} for a given deployment, pod, or other resource
+    - can specify a port or let k8s select one
+
+kubectl port-forward
+  - forwards 1 or more local ports to a pod
+  - kubectl port-forward <pod name> [LOCAL_PORT:]REMOTE_PORT]
+
+kubectl attach
+  - attach to a pod to see its output
+  - attaches to a process that is already running inside an existing container 
+
+kubectl exec
+  - execute a command inside a container
+  - -i option will pass stdin to the container
+  - -t option will specify stdin as TTY
+  - eg, get to a bash shell to debug
+    - kubectl exec -it tomcat-deployment-56ff5c79c5-vkrj9 bash
+
+kubectl label pods
+  - updates labels on a pod for record-keeping, auditing purposes
+  - eg, kubectl label pods tomcat-deployment-56ff5c79c5-vkrj9 healthy=false
+    - "healthy=false" associated with this pod
+
+kubectl run
+  - instead of using a YAML deployment file
+  - can also specify a command line image to run
+  - runs the specified image on the cluster, specify name, port to expose, etc
+
+
+KUBECTL REFERENCES & CHEAT SHEET
+https://kubernetes.io/docs/user-guide/kubectl/v1.10
+https://kubernetes.io/docs/user-guide/kubectl-cheatsheet
+
+bash commands executed :
+  543  xcode-select --install
+  544  brew install kubectl
+  545  kubectl
+  551  kubectl version
+  553  brew install homebrew/cask/minikube
+  556  brew cask install virtualbox
+  557  minikube start
+  558  kubectl run hello-minikube --image=gcr.io/google_containers/echoserver:1.4 --port=8080
+  559  kubectl expose deployment hello-minikube --type=NodePort
+  560  kubectl get pod
+  561  curl $(minikube service hello-minikube --url)
+  562  kubectl delete deployment hello-minikube
+  563  kubectl get pod
+  564  minikube stop
+  565  history
+  567  cat kubernetes-demo/01_Introduction_to_Kubernetes/Your\ First\ k8s\ App/deployment.yaml 
+  569  minikube start
+  570  kubectl apply -f kubernetes-demo/01_Introduction_to_Kubernetes/Your\ First\ k8s\ App/deployment.yaml 
+  571  kubectl expose deployment tomcat-deployment --type=NodePort
+  573  minikube service tomcat-deployment --url
+  574  curl http://192.168.99.100:32047
+  575  history
+  577  kubectl get pods
+  579  kubectl describe pods tomcat-deployment-56ff5c79c5-vkrj9
+  580  kubectl get pods
+  581* kubectl attach tomcat-deployment-56ff5c79c5-vkrj
+  582  kubectl exec -it tomcat-deployment-56ff5c79c5-vkrj9 bash
+  587  kubectl exec -it tomcat-deployment-56ff5c79c5-vkrj9 hostname
+  588  kubectl exec -it tomcat-deployment-56ff5c79c5-vkrj9 bash
+  589  kubectl label pods tomcat-deployment-56ff5c79c5-vkrj9 healthy=false
+  590  kubectl get pods
+  591  kubectl run hazelcast --image=hazelcast --port=5701
+  592  kubectl describe pods
+  593  kubectl version
+  594  history
+
+
+Section 2 Architecture Overview
 
