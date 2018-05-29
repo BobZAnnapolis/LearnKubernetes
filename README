@@ -385,3 +385,73 @@ Section 3
 
 DNS & Service Discovery
 =======================
+
+DNS - Domain Name Service, cornerstone of the Internet
+translates names into IP addresses
+K8S has a build-in DNS service that is launched & cfg'd automatically
+K8S cfgs kubelets to tell individual containers to use the DNS service's IP to resolve DNS names
+
+Service Discovery : Modern software best practices consist of having completely separate deployment, scaling and configuration steps to build modern systems. 
+
+How do we get them to communicate with each other in order to create a viable useful application in a containable way ? Service Discovery
+
+Every service in your K8S cluster gets a DNS name
+K8S has a specific and consistent nomenclature for deciding what this DNS name is
+- general form is <my-service-name>.<my-namespace>.svc.cluster.local
+But, you can use this well-known pattern to design loosely-coupled services or at least set "sane defaults"
+- 1 could use environment variables to set the DNS name of other services your app may need
+- or you could expect services at set DNS names
+- or combine the 2 above and expect services at well-known DNS names and allow environment variables to override
+
+
+a note on namespaces
+- we'll discuss namespaces in depth soon in their own lecture, but for now, know the following
+- k8s allows you to define "namespaces" - they allow you to separate your cluster into smaller logical clusters
+  - by default, everything you do is in the "default" namespace (and everything we've done so far has been)
+  - k8s DNS names will include this namespace in the assigned DNS name
+- namespaces are helpful mostly for large clusters with many users across many teams & projects
+  - using the default namespace is fine if this logical separation is not required 
+  - eg of when needed, small homework assignment :no; MySQL instances for large corporations - have namespaces for the different departments would help create logical separations
+
+HOW APP01 COULD REACH APP02 USING DNS
+
+POD01
+  - has a container
+  - running Application_1
+  - has a SERVICE: APP1 w/ip: 10.0.0.1
+
+POD02
+  - has a container
+  - running Application_2
+  - has a SERVICE: APP2 w/ip: 10.0.0.2
+
+$ HOST APP1-SERVICE
+APP1-SERVICE HAS ADDRESS 10.0.0.1
+$ HOST APP2-SERVICE
+APP2-SERVICE HAS ADDRESS 10.0.0.2
+$ HOST APP2-SERVICE.DEFAULT
+APP2-SERVICE.DEFAULT HAS ADDRESS 10.0.0.2
+$ HOST APP2-SERVICE.DEFAULT.SVC.CLUSTER.LOCAL
+APP2-SERVICE.DEFAULT.SVC.CLUSTER.LOCAL HAS ADDRESS 10.0.0.2
+
+When using K8S - it has a built-in kube-dns 'process' that handles dns resolution automatically and is configured to use the default cfg'd namespaces so as long as the cluster abides by that naming convention - the built-in kube-dns will work
+
+  910  kubectl get deployments
+  911  kubectl delete deployment/mongodb-deployment
+  913  kubectl delete deployment/tomcat-deployment
+  914  kubectl get deployments
+  915  kubectl get pods
+  919  vim ./mysql-deployment.yaml 
+  920  kubectl create -f ./mysql-deployment.yaml 
+  921  kubectl get pods
+  922  lsa
+  923  vim wordpress-deployment.yaml 
+  924  kubectl create -f ./wordpress-deployment.yaml 
+  925  kubectl get pods
+  933  kubectl get services wordpress
+  934  minikube service wordpress --url
+  - copy-paste-url to access wordpress site
+
+
+VOLUMES
+=======
