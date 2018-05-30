@@ -455,3 +455,120 @@ When using K8S - it has a built-in kube-dns 'process' that handles dns resolutio
 
 VOLUMES
 =======
+
+Normally, unless otherwise configured - data in a Docker container is ephemeral, ie, once container is shut down - data vanishes.
+
+This is essentially a stateless implementation - it is at the core of Kubernetes and containerization.
+
+Downside - what do you do if you need persistent data ? That's where volumes come in.
+
+Kubernetes provides directives that users cause to "attach" their physical volumes to their logical containers.
+
+Volumes are like disks, but with a bit more
+- volumes can be considered just a directory, with some data, which containers in a pod can access
+- K8S supports multiple types of volumes that take care of how that data is stored, persisted, and made available
+  - Support for a variety of cloud providers' block store products
+  - Support for SAN-type hardware, file systems, etc
+  - Support for local volumes {for testing/minikube only ! Not production}
+- Certain types of Volumes can also provide sharing of files between pods babying mounted to multiple Pods simultaneously
+
+Types of Volumes
+- this is an incomplete list {see K8S documentation for complete list}
+- Cloud Provider
+  - Azure Disk & Azure File
+  - AWS EBS - Elastic Block Store
+  - Google Compute Engine Persistent Disk
+- SAN/File System/Hardware
+  - CephFS
+  - Fibre Channel
+  - GlusterFS
+  - NFS
+  - iSCSI
+  - Local (For development/minikube only - not supported in production)
+
+
+USING VOLUMES
+=============
+Pods can specify what volumes they need and where to mount them
+  - Using the spec.volumes field(what volumes they need)
+  - Using the spec.containers.volumeMounts field (where to mount them)
+
+Processes in the containers then see a filesystem view of the data in that Volume
+
+Using Volumes lets us separate stateless portions of our application (the code) from stateful data
+  - The infrastructure can be scaled, maintained, and live separately from the data it works on/with
+  - Also may ease portability, backup, recovery, and other management tasks in well-architected systems
+
+We don't need to backup the Docker containers cuz they live inside a repository
+But we may need to backup the data - separating the pieces this way, ie code in Docker registry, data in Volumes - allows us a variety of options to keep a system backed up
+
+Separating them out eases the management of backing an app up
+
+USING PERSISTENT VOLUMES
+========================
+PersistentVolumes ate Volumes designed to provide persistent disk-like functionality, ie, data survives reboots
+Using then involves :
+  - Provisioning a PersistentVolume (akin to creating/installing a disk in a virtual machine or hardware server)
+  - Establishing a PersistentVolumeClaim (it is a request for storage by a user/Pod)
+By examining available PersistentVolumes and demands from PersistentVolumeClaims by running Pods, K8S binds available volumes to Pods based on the options specified by the PersistentVolumeClaims to matching PersistentVolumes, eg, by name, storage size, storage class, etc asked for in the Claims
+
+
+HOW CLAIMS & VOLUMES INTERACT
+=============================
+Administrator will define Volumes available for use, based upon available options
+Developer/User will add VolumeClaims to their pod deployment yams files
+When the app starts - the claims are sent to the K8S Master who matches claims to the available defined volumes and does the attaching to the Pods at runtime
+
+Sometimes, if possible, the K8S Master will allocate new volumes under certain circumstances, eg, load balancing....if it can - ie, dynamic provisioning
+
+
+CREATING A VOLUME
+=================
+PersistentVolumes are defined using a "PersistentVolume" definition that specifies their type, size, and how they can be accessed
+Their type and access type is highly dependent on the underlying media 
+- local disk
+- network mount
+- Cloud Block Storage Service
+- Directory on the Host (testing only, not for production)
+
+YAML files have a set of keywords to use based upon access type, eg local
+
+bobzawislak (master *) 02_Volumes $ cat local-volumes.yaml 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: local-pv-1
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /tmp/data/pv-1
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: local-pv-2
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /tmp/data/pv-2
+
+Based upon the "kind" - access K8S documentation for all the other parms
+
+
+CLAIMING A VOLUME
+=================
+Pods use PersistentVolumeClaims to request physical storage defined by PersistentVolumes
+K8S uses the Claim to look for a PersistentVolume that satisfies the claim's requirements
+- if it finds a match, it binds the claim to the volume
+- if it cannot find a match (& automatic provisioning is NOT enabled), it results in an error
+
