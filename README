@@ -572,3 +572,42 @@ K8S uses the Claim to look for a PersistentVolume that satisfies the claim's req
 - if it finds a match, it binds the claim to the volume
 - if it cannot find a match (& automatic provisioning is NOT enabled), it results in an error
 
+
+videos walked thru creating the local volumes, applying the new YAML files to the running WP site,
+getting the URL to the WP site, adding a post - if saved correctly, indicates that the information
+was saved into the new volumes
+
+delete the wordpress deployment  and try to reload - browser can't - kubectl get deployments lists just the wordpress-mysql deployment
+
+recreate the wordpress deployment using existing file - ok to ignore some of the errors cuz we're previously created a few of them
+
+once the deployment exists - get URL {should be the same} and re-load
+
+ 1086  kubectl create -f local-volumes.yaml
+ 1087  kubectl apply -f mysql-deployment.yaml 
+ 1088  kubectl apply -f wordpress-deployment.yaml 
+ 1089  kubectl get pods
+ 1092  kubectl describe pod wordpress-5cddd8c7b-vf2s4
+ 1093  kubectl describe pod wordpress-mysql-5577fbc78-fnq7z
+ 1095  cat wordpress-deployment.yaml 
+ 1096  minikube service wordpress --url
+       - create the wp site
+       - login
+       - create a post
+       - get to home page and see the post - this shows data was saved in the persistent volume db
+ 1097  kubectl get deployments
+ 1098  kubectl delete deployment wordpress
+       - this works - can no longer load the page
+ 1099  kubectl get deployments
+ 1100  kubectl create -f wordpress-deployment.yaml 
+       - this says it works
+       - but get a ContainerCfgError involving mysql-secrets
+ 1101  minikube service wordpress --url
+       - never gets ready because of above
+
+overall tho - can see how dividing up the functionality is an advantage 
+
+
+SECRETS
+=======
+
