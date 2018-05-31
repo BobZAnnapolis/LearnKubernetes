@@ -596,18 +596,83 @@ once the deployment exists - get URL {should be the same} and re-load
        - create a post
        - get to home page and see the post - this shows data was saved in the persistent volume db
  1097  kubectl get deployments
- 1098  kubectl delete deployment wordpress
+ 1098  kubectl delete deployment word-press
        - this works - can no longer load the page
  1099  kubectl get deployments
  1100  kubectl create -f wordpress-deployment.yaml 
        - this says it works
-       - but get a ContainerCfgError involving mysql-secrets
+       - get 2 errors due to previous services and persistentVolumeClaims being created - ignore
  1101  minikube service wordpress --url
-       - never gets ready because of above
+       - should be same as before
+       - refresh page - site should be displayed - and previous post should still exist
 
-overall tho - can see how dividing up the functionality is an advantage 
+this is an example of how you can divide up functionality
+The code originally had wordpress and mysql yaml files that had secret refs in them
+    - had to replace those with the hard-coded passwords from the yamls from chapter 01 
 
 
-SECRETS
-=======
+03 SECRETS
+==========
 
+credentials to :
+- access their systems
+- access their systems securely
+- access other systems
+
+holds access information "secretly" and separately from plaintext items
+
+Secrets contain small amounts of data
+Secrets can be delivered to a pod in the form of :
+- a file placed on a volume at runtime containing the secret data (useful for certificates)
+- an environment variable referenced by the Pod and inserted at runtime into the environment by the kubelet running the Pod - just like any other environment variable
+
+HOW SECRETS ARE STORED
+======================
+- K8S provides separation for secrets, it does NOT provide strong encryption
+- secrets are typically Base64 encoded strings stored separately from configuration and injected at runtime
+- you can encode it manually or use K8S' tools to do it for you
+
+HOW SECRETS ARE STRUCTURED
+==========================
+- secrets are key:value pairs, both the key and the value are arbitrary strings
+
+K8S uses Base64 encoding
+
+CREATING A SECRET
+=================
+kubectl has commands
+from a file
+  - kubectl create secret generic db-user-pass --from-file=./username.txt --from-file=./password.txt
+from a literal on the command line
+  - kubectl create secret generic mysql-pass --from-literal=password=YOUR_PASSWORD
+
+once it is created, the 2nd part is using it
+cause it as an environment variable
+
+USING A SECRET AS AN ENVIRONMENT VARIABLE
+=========================================
+check the following section of the wordpress-mysql yaml file
+       env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-pass
+              key: password
+
+ 1331  kubectl create secret generic mysql-pass --from-literal=password=k8s
+ 1332  kubectl get secret
+ 1333  kubectl get deployments
+ 1334  kubectl describe deployment wordpress-mysql
+       - should see plaintext password
+ 1335  kubectl apply -f mysql-deployment.yaml
+       kubectl describe deployment wordpress-mysql
+       -should see a change in where the password is stored 
+
+ 1336  kubectl describe deployment wordpress-mysql
+ 1337  kubectl apply -f wordpress-deployment.yaml 
+ 1338  kubectl describe deployment wordpress
+       - should have been the same as above but was still plaintext  :-(
+
+
+04 USAGE AND RESOURCE MONITORING
+================================
