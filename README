@@ -666,13 +666,93 @@ check the following section of the wordpress-mysql yaml file
        - should see plaintext password
  1335  kubectl apply -f mysql-deployment.yaml
        kubectl describe deployment wordpress-mysql
-       -should see a change in where the password is stored 
+       - should now see a password stored in the secret
 
  1336  kubectl describe deployment wordpress-mysql
+       - should see plaintext password
  1337  kubectl apply -f wordpress-deployment.yaml 
  1338  kubectl describe deployment wordpress
-       - should have been the same as above but was still plaintext  :-(
+       - should now see a password stored in the secret
+       - it wasn't, was still stored as plaintext :-)
+       - asked a question on the course forum
+       - got the response that "sometimes" you have to do a "kubectl delete -f wordpress-deployment.yaml"
+         and then the apply
+       - i tried that, that didn't work
+       - then i deleted both *-deployment.yamls ; made sure they were gone ; then apply'd both
+       - this worked - YEAH !!!!
 
 
 04 USAGE AND RESOURCE MONITORING
 ================================
+
+now that the systems are running that can persist - how does it live in the wild ?
+
+we want it to run reliably - we have to perform health checks, see how it is using resources, etc
+
+need metrics and resource monitoring
+
+MANY SOLUTIONS
+==============
+usage and resource monitoring
+many free & paid packages and services both for K8S and beyond
+we'll explore K8S' "native" stack and a few open source additions
+  - Heapster
+  - backed by InfluxDB
+  - visualized by Grafana
+
+these are installed on most Cloud providers by default, eg AWS GCE
+When using MiniKube - have to enable them manually - see steps captured below
+
+Hipster is a CNCF {??}
+- installed as a cluster-wide pod, gathers monitoring and events data from each pod on each node by talking to each pods kubelet, kubelet fetches the data from cAdvisor, an internal K8S system; 
+- Heapster then sends this data to InfluxDB
+- use Grafana to visualize the data gathered - make decisions based upon needs
+
+HEAPSTER
+  - K8S Container Cluster Monitoring solution
+  - maintained by CNCF
+  - collects and interprets various signals like compute resource usage, lifecycle events, etc
+  - using pluggable back-ends, we'll use InfluxDB
+  - collects by default all data monitored by K8S built-in cAdvisor fun
+    - additional source are described in the documentation
+  
+ENABLING HEAPSTER ON MINIKUBE
+  - comes enabled on most cloud-based platforms
+  - On MINIKUBE, we'll have to enable the add-on
+    - minikube adding enable heapster
+  - Grab a snack or a beer, it may take a few minutes or longer for Heapster to gather all the stats with . . . .
+    - kubectl get pods --namespace=kube-system
+
+bobzawislak (master *) 04_Usage_and_Resource_Monitoring $ kubectl get pods --namespace=kube-system
+NAME                                    READY     STATUS    RESTARTS   AGE
+etcd-minikube                           1/1       Running   0          23h
+heapster-vblcg                          1/1       Running   0          1m
+influxdb-grafana-q64dj                  2/2       Running   0          1m
+kube-addon-manager-minikube             1/1       Running   0          1d
+kube-apiserver-minikube                 1/1       Running   0          1d
+kube-controller-manager-minikube        1/1       Running   0          1d
+kube-dns-86f4d74b45-qc2f5               3/3       Running   0          1d
+kube-proxy-clzjh                        1/1       Running   0          1d
+kube-scheduler-minikube                 1/1       Running   0          1d
+kubernetes-dashboard-5498ccf677-5p27m   1/1       Running   0          1d
+storage-provisioner                     1/1       Running   0          1d
+
+  - when pods are up access the Grafana Dashboard with
+    - minikube addons open heapster 
+      - upper left, sign in admin / admin
+      - upper left, change namespaces and select different pod names to see kinds of information collected/displayed
+
+
+NAMESPACES & RESOURCE QUOTAS {Lecture 29}
+=========================================
+
+K8S allows you to name objects of any type
+works ok for single user clusters
+
+for multiple teams each running their own version - namespaces
+
+- namespaces create multiple virtual clusters on the same physical clusters
+  - the virtual clusters are called namespaces
+- namespaces provide separation, when you start to need them, start using them
+- until then, using "default" is just fine
+
