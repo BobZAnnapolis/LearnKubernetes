@@ -753,6 +753,111 @@ for multiple teams each running their own version - namespaces
 
 - namespaces create multiple virtual clusters on the same physical clusters
   - the virtual clusters are called namespaces
-- namespaces provide separation, when you start to need them, start using them
+- namespaces provide scope and separation of clusters
+  - namespaces need to be unique but the names of things w/in namespaces can be the same
+    - this "could" be useful if similar functionality is occurring in different namespaces, eg dev-int-prod
+      - could test things in dev and then migrate to other clusters just by changing namespace
+- when you start to need them, start using them, usually for groups of people of 10 or more
 - until then, using "default" is just fine
+
+- can use "resource quotas" to limit resources each namespace can use
+
+- not useful for different versions of things
+- better for logical organizations, projects
+  - eg, software dev, hardware, HR
+
+RESOURCE LIMITS IN NAMESPACES
+=============================
+- namespaces can be assigned ResourceQuota objects
+- each namespace should have at most one {but not required}
+- this will limit the amount of usage allowed by the objects in that namespace
+- you can limit, eg,
+  - compute
+  - storage
+  - memory
+  - how many objects exist
+
+ResourceQuotas can be used for lots of things - refer to documentation, eg, providing access control to objects based upon namespaces
+
+USEFUL COMMANDS FOR NAMESPACES
+==============================
+- similar to K8S commands for other types of objects
+- use kubectl
+  - kubectl create namespace <namespace_nm>
+  - kubectl get namespace
+
+PRACTICAL EXAMPLE
+=================
+- let's example a deployment that requests a certain amount of CPU 
+  - 200m per container w/3 replicas for a total of 600m of CPU
+  - in a namespace that only has 400m of cpu allocated using resource limits
+- let's examine how k8s handles this
+- our steps will include :
+  - create the namespace
+  - assign the namespace a 400m CPU resource limit
+  - deploy tomcat (as we have in the past) into this new namespace but this time w/3 replicas requesting 200m CPU each
+  - use kubectl to examine deployment status
+
+
+
+ 1393  kubectl get namespace
+ 1394  kubectl create namespace cpu-limited-tomcat
+ 1395* kubectl describe namespace
+ 1396  cat cpu-limits.yaml 
+ 1397  kubectl create -f cpu-limits.yaml --namespace cpu-limited-tomcat
+ 1398  kubectl describe namespace cpu-limited-tomcat
+       kubectl get resourcequota --namespace=cpu-limited-tomcat
+       cat tomcat-deployment.yaml 
+       kubectl apply -f tomcat-deployment.yaml --namespace=cpu-limited-tomcat
+       kubectl describe deployment tomcat-deployment --namespace=cpu-limited-tomcat
+       - should fail because we didn't set up enough resources, and it doesn't
+
+bobzawislak (master *) 04_Usage_and_Resource_Monitoring $ kubectl describe deployment tomcat-deployment --namespace=cpu-limited-tomcat
+
+Name:                   tomcat-deployment
+Namespace:              cpu-limited-tomcat
+CreationTimestamp:      Sat, 02 Jun 2018 15:15:31 -0400
+Labels:                 <none>
+Annotations:            deployment.kubernetes.io/revision=1
+                        kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"apps/v1beta2","kind":"Deployment","metadata":{"annotations":{},"name":"tomcat-deployment","namespace":"cpu-limited-tomcat"},"spec":{"rep...
+Selector:               app=tomcat
+Replicas:               3 desired | 0 updated | 0 total | 0 available | 3 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=tomcat
+  Containers:
+   tomcat:
+    Image:      tomcat:9.0
+    Port:       8080/TCP
+    Host Port:  0/TCP
+    Requests:
+      cpu:        200m
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type             Status  Reason
+  ----             ------  ------
+  Available        False   MinimumReplicasUnavailable
+  ReplicaFailure   True    FailedCreate
+  Progressing      False   ProgressDeadlineExceeded
+OldReplicaSets:    <none>
+NewReplicaSet:     tomcat-deployment-6759c57f78 (0/3 replicas created)
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  13m   deployment-controller  Scaled up replica set tomcat-deployment-6759c57f78 to 3
+
+
+- it could have done 2 of the 3 but K8S FAILED IT IN IN ALL-OR-NOTHING FASHION
+
+- look at the CONDITIONS and EVENTS areas of a DECRIBE-EMPLOYMENT output to get clues on success / failure conditions
+  - eg, Available  False   MinimumReplicasUnavailable - indicates resources allocated to namespace was not enough to handle deployment desc
+
+
+AUTO-SCALING
+============
+
 
