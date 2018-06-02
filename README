@@ -857,7 +857,65 @@ Events:
   - eg, Available  False   MinimumReplicasUnavailable - indicates resources allocated to namespace was not enough to handle deployment desc
 
 
-AUTO-SCALING
-============
 
+05 AUTO-SCALING
+===============
+
+- k8s provides a built-in facility called a HORIZONTAL POD AUTOSCALER {HPA} that adjusts the number of replicas of a pod to match observed average CPU utilization to a target specified by the user
+
+- there are a variety of configurable options - quite a few - the key takeaway is to know that HPS will create new pods {or remove pods} from a replica to maintain average CPU utilization across all Pods to a level specified when you create your HPA - subject to conditions you specify 
+
+
+CREATING AN HPA
+===============
+- kubectl autopsical provides the needed functions to create an HPA
+- to create an autoscaler on our wordpress deployment that targets CPU utilization to an average of 50% per Pod, within the parameters of a minimum of 1 pod and up to a maximum of 10 pods
+  - kubectl autoscale deployment wordpress --cpu-percent=50 --min=1 --max=10
+
+PRACTICAL EXAMPLE
+=================
+- artificially limit our WordPress Pod so we can stress it easily
+  - kubectl apply -f wordpress-deployment.yaml  {in this chapter}
+- add an HPA to enable auto-scaling on our WordPress installation to keep CPU at 50% average (or lower), with a minimum of 1 Pod and max of 5 Pods
+  - kubectl autoscale deployment wordpress --cpu-percent=50 --min=1 --max=5
+- {in a separate terminal window}
+  - simulate load using an infinite HTTP request loop from a worker Pod on our cluster to Wordpress to spike our CPU and see how HPA responds
+    - kubectl run -i --tty load-generator --image=busybox /bin/sh
+      hit enter at command prompt, then
+      > while true;do wget -q -O- http://wordpress.default.svc.cluster.local;done
+- check the HPA status immediately and after about a minute
+  - kubectl get spa
+
+- most modern machines can handle most current requests so in order to get this example to work, have to "modify" our running system so that it looks like it is running on hardware/resources that can be tested by this example
+
+ 1435  kubectl apply -f wordpress-deployment_just_requests_cpu_100m.yaml 
+ 1436  kubectl get deployments
+ 1437  kubectl describe deployments wordpress
+ Containers:
+   wordpress:
+    Image:      wordpress:4.8-apache
+    Port:       80/TCP
+    Host Port:  0/TCP
+    Requests:
+      cpu:  100m     <== this now shows up as part of the deployment
+
+kubectl autoscale deployment wordpress --cpu-percent=50 --min=1 --max=5
+  - deployment.apps "wordpress" autoscaled
+
+kubectl autoscale deployment wordpress --cpu-percent=50 --min=1 --max=10
+kubectl apply -f ./wordpress-deployment.yaml
+kubectl autoscale deployment wordpress --cpu-percent=50 --min=1 —max=5
+{in another windows}
+kubectl run -i --tty load-generator --image=busybox /bin/sh
+while true; do wget -q -O- http://wordpress.default.svc.cluster.local; done
+   - i kept getting "network unreachable" errors - don't think it was actually doing 
+{back in same window as original set of commands, keep checking to see the load-generator cause a spike and increase in pods}
+kubectl get hpa
+   - if working properly - should see the TARGET and Pods numbers change
+   - mine weren't - i was having issues with the load generator working
+   - asked course about it
+
+
+06 AUDITING
+===========
 
