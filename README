@@ -919,3 +919,72 @@ kubectl get hpa
 06 AUDITING
 ===========
 
+Security and Auditing - IMPORTANT PRODUCTION SYSTEMS
+
+What has gone on ?,
+How it happened,
+Where it happened, and
+Who or what has caused an event to happen ?
+
+IMPORTANT ASPECT : has to be free from access from people who can change the records it keeps
+
+Records have to be accurate and TRUSTED
+
+The purpose is to be able to investigate everything from simple innocent mistakes all  the way up to intentional criminal / destructive activity
+
+Since K8S provides a framework that allows systems to perform any kind of activity - it also provides an auditing facility
+
+Different TYPES exist
+- Legacy auditing, which was SUNSET, and, 
+- Advanced auditing, 
+- Standard / default auditing
+
+This course looks at advanced
+
+WHAT's K8S AUDITING ?
+=====================
+- K8S auditing provides a security-relevant chronological set of records documenting the sequence of activities that have affected the system
+- Can help answer what happened, why, by whom, on what, where, how it was initiated, and where it was going
+- The kube-apiserver performs auditing according to the Audit Policy and sends records to the Audit Backend
+
+The auditing process runs outside of kubectl and any of the pods running but monitors all of their activities
+
+It is configured outside of the cluster
+
+2 LARGE AREAS of CONCERN
+- AUDIT POLICY
+  - defines 'what' should be logged
+  - defined in a yaml file like any other K8S object but since this is auditing, kubectl won't help you much here
+    - auditing is defined on the kube-apiserver, it's an option that's passed to kube-apiserver when it starts, this varies by cluster
+    - luckily, for minikube, we just pass a few options (like our Audit Policy) when we start minikube
+  - nearly anything you can create or do can be audited in K8S
+- AUDIT BACKEND
+  - Audit Backends export audit events to external storage 
+  - out of the box, kube-apiserver provides 2 backends
+    - Logs - which writes events to disks
+    - Webhooks - sends events to an external API/system
+
+PRACTICAL EXAMPLE
+=================
+- let's set up a simple Audit Policy tools all requests regarding Metadata, this will let us see what Audit data looks like without overload
+- we'll configure minikube to log it to a file on our file system
+- our steps :
+  - stop minikube (if running)
+  - define an Audit Policy
+  - start minikube with Audit Policy defined and appropriate options
+    - won't start with audit-policy from course - gets start-up errors - posted a question
+
+- when it works, minikube ssh onto the machine, navigate to the startup logs path and cat the audit logs
+  - cat audit.logs | jq . 
+
+
+07_EXERCISE
+===========
+
+see files in repo
+
+
+
+08 HIGH AVAILABILITY
+====================
+
