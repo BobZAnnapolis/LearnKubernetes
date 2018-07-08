@@ -988,3 +988,66 @@ see files in repo
 08 HIGH AVAILABILITY
 ====================
 
+Same adage for all software/hardware systems "The system is only as reliable as the stability of the system it is running on - if any piece fails, could mean catastrophe for the whole thing"
+
+
+1 way to make a system more reliable - redundancy, replication & graceful handling of faults that occur in the system
+
+
+KEY K8S ARCHITECTURE ITEMS
+- Master 
+  {runs the following 3 processes, at least}
+  kube-apiserver
+  kube-controller-manager
+  kube-scheduler
+- etcd
+  distributed keystone that saves all cluster data
+  not part of k8s - part of Linux OS
+  fast scalable distributed datastore
+
+RECOMMENDED to NOT RUN as the same machines that are running master
+
+
+SETTING UP A RELIABLE SYSTEM
+1. Creating reliable nodes that, together, will form a highly available master implementation in following steps
+   - the actual Linux machines that the Master and etcd will run
+   - Separate independent Linux machines that will run master processes
+   - should run kubelet & monit
+   - how many and where depends on the needs of your application and business
+     - eg, if you're only running a business in 1 location - makes no sense to set up machines 1/2 around the world
+       -do what makes sense business-wise, financially, practically, etc
+2. Seeing up a redundant, reliable data storage layer with clustered etcd
+   - etcd is a system that stores key and value pairs that is the data in a k8s cluster
+   - it should run on every node that will be a master
+   - consult the etcd documentation on the variety of options on how etcd can provide even deeper levels of redundancy if needed
+     - etcd is not a standard k8s component, part of host os, part of system cfg is to use it
+3. Starting replicated, load balanced API servers {kube-api}
+   - kube-api should run on all nodes that will be a master
+     - allows for command line kubectl interaction
+   - kube-api should be behind a network load balancer, this will vary with your environment you are running 
+     - load balancing is not a standard k8s component - has to be set up by hosting env and cfg'd to interact w/k8s
+4. Setting up master-elected kube-scheduler and kube-controller-manager daemons
+   - now that the above items are set up on reliable nodes, we have the pieces in place, but they aren't actually running
+   - we need to ensure only 1 actor works on the data at a given time
+   - each scheduler and controller manager will be started with a "--leader-elect" flag that will use a lease-lock API between themselves to ensure only 1 instance of each is running at a given time
+5. Multiple worker nodes
+   - 
+
+KOPS - k8s tools that assist in performing each one of these
+
+Up to this point - all of the work has been on a minikube - ie, master & worker nodes all on 1 machine
+
+If something went wrong with that 1 machine - we're effed
+
+In order to set up an HA system - can no longer do that - have to split up the components onto multiple machines, and even then if you just have the masters on 1 machine and something goes wrong there - you're effed again - so to really make it pretty reliable, we now have to make multiple masters on multiple machines, multiple etcds on multiple machines and multiple nodes on multiple machines
+
+The higher number of multiple components running on multiple machines increases the chances that your system will be up and highly available - 1 "bad" side effect of this is that you'll have to have something in place to make sure all the machines are operating correctly and that bad/down machines get reported  and corrected promptly.
+
+Another thing to consider - "multiple" machines also means different locations so that they won't be affected by the same storm, same loss of electricity, same fiber cut, same natural disaster yada yada yada  - best way is to separate geographically.
+
+Some issues to consider when designing your k8s systems:
+  - running 10 masters will usually cost 10 times as running 1 master
+  - running multiple masters in multiple locations will need to take into account connectivity issues, data throughout, time lags, networking, etc
+
+
+Lecture 37: MASTER K8S : MASTERS
