@@ -1050,4 +1050,5 @@ Some issues to consider when designing your k8s systems:
   - running multiple masters in multiple locations will need to take into account connectivity issues, data throughout, time lags, networking, etc
 
 
-Lecture 37: MASTER K8S : MASTERS
+
+
